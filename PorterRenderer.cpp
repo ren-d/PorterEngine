@@ -43,7 +43,7 @@ void PorterRenderer::SetupDevices()
 
 	UINT factoryFlags = 0;
 
-	CreateDXGIFactory2(factoryFlags, IID_PPV_ARGS(&factory));
+	CreateDXGIFactory2(factoryFlags, IID_PPV_ARGS(&m_factory));
 
 	// Find Device 
 
@@ -53,7 +53,7 @@ void PorterRenderer::SetupDevices()
 	ComPtr<IDXGIAdapter1> adapter1;
 	for (
 		UINT adapterIndex = 0;
-		SUCCEEDED(factory->EnumAdapterByGpuPreference(
+		SUCCEEDED(m_factory->EnumAdapterByGpuPreference(
 			adapterIndex,
 			DXGI_GPU_PREFERENCE_UNSPECIFIED,
 			IID_PPV_ARGS(&adapter1)));
@@ -98,9 +98,9 @@ void PorterRenderer::CreateSwapChain()
 	swapChainDesc.SampleDesc.Count = 1;
 
 	ComPtr<IDXGISwapChain1> swapChain;
-	factory->CreateSwapChainForHwnd(m_commandQueue.Get(), m_hwnd, &swapChainDesc, nullptr, nullptr, &swapChain);
+	m_factory->CreateSwapChainForHwnd(m_commandQueue.Get(), m_hwnd, &swapChainDesc, nullptr, nullptr, &swapChain);
 
-	factory->MakeWindowAssociation(m_hwnd, DXGI_MWA_NO_ALT_ENTER);
+	m_factory->MakeWindowAssociation(m_hwnd, DXGI_MWA_NO_ALT_ENTER);
 
 	swapChain.As(&m_swapChain);
 	m_currentFrame = m_swapChain->GetCurrentBackBufferIndex();
