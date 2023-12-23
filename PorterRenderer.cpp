@@ -3,7 +3,30 @@
 namespace RendererGlobals {
 	const UINT frameCount = 3;
 }
-void PorterRenderer::Init(HWND hwnd)
+void PorterRenderer::Initialize(HWND hwnd)
+{
+	m_hwnd = hwnd;
+	SetupPipeline();
+}
+
+void PorterRenderer::SetupPipeline()
+{
+
+#if DEBUG
+	EnableDebugLayer();
+#endif
+	SetupDevices();
+	CreateCommandQueue();
+	CreateSwapChain();
+	CreateCommandAllocator();
+
+
+
+
+
+}
+
+void PorterRenderer::EnableDebugLayer()
 {
 	// Enable Debug Layer
 	ComPtr<ID3D12Debug> debugController;
@@ -12,15 +35,19 @@ void PorterRenderer::Init(HWND hwnd)
 	{
 		debugController->EnableDebugLayer();
 	}
+}
 
+void PorterRenderer::SetupDevices()
+{
 	// Init Factory 
-	
+
 	UINT factoryFlags = 0;
-	ComPtr<IDXGIFactory6> factory;
 
 	CreateDXGIFactory2(factoryFlags, IID_PPV_ARGS(&factory));
 
-	// Create Device 
+	// Find Device 
+
+	// TODO: clean this up
 
 	ComPtr<IDXGIAdapter1> adapter;
 	ComPtr<IDXGIAdapter1> adapter1;
@@ -44,6 +71,10 @@ void PorterRenderer::Init(HWND hwnd)
 
 	SUCCEEDED(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device)));
 
+}
+
+void PorterRenderer::CreateCommandQueue()
+{
 	// Create Command Queue
 
 	D3D12_COMMAND_QUEUE_DESC queueDesc = {};
@@ -51,7 +82,10 @@ void PorterRenderer::Init(HWND hwnd)
 	queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
 
 	m_device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_commandQueue));
+}
 
+void PorterRenderer::CreateSwapChain()
+{
 	// Create Swap Chain
 
 	DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
@@ -64,38 +98,42 @@ void PorterRenderer::Init(HWND hwnd)
 	swapChainDesc.SampleDesc.Count = 1;
 
 	ComPtr<IDXGISwapChain1> swapChain;
-	factory->CreateSwapChainForHwnd(m_commandQueue.Get(), hwnd, &swapChainDesc, nullptr, nullptr, &swapChain);
+	factory->CreateSwapChainForHwnd(m_commandQueue.Get(), m_hwnd, &swapChainDesc, nullptr, nullptr, &swapChain);
 
-	factory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER);
+	factory->MakeWindowAssociation(m_hwnd, DXGI_MWA_NO_ALT_ENTER);
 
 	swapChain.As(&m_swapChain);
 	m_currentFrame = m_swapChain->GetCurrentBackBufferIndex();
 
+	CreateDescriptorHeaps();
 
-	// Create Render Target View Descriptor Heap
-	UINT rtvHandleIncrementSize;
-	{
-		D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc = {};
-		descriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-		descriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-		descriptorHeapDesc.NumDescriptors = RendererGlobals::frameCount;
-
-		m_device->CreateDescriptorHeap(&descriptorHeapDesc, IID_PPV_ARGS(&m_rtvHeap));
-
-		rtvHandleIncrementSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-	}
 	// Create Frame Resources
 	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
 	ComPtr<ID3D12Resource> renderTargets[RendererGlobals::frameCount];
-	// Create Command Allocator
-
 
 	for (UINT i = 0; i < RendererGlobals::frameCount; ++i)
 	{
 		m_swapChain->GetBuffer(m_currentFrame, IID_PPV_ARGS(&renderTargets[i]));
 		m_device->CreateRenderTargetView(renderTargets[i].Get(), nullptr, rtvHandle);
-		rtvHandle.Offset(1, rtvHandleIncrementSize);
+		rtvHandle.Offset(1, m_rtvHandleIncrementSize);
 	}
-	ComPtr<ID3D12CommandAllocator> commandAllocator;
-	m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&commandAllocator));
+
+}
+
+void PorterRenderer::CreateDescriptorHeaps()
+{
+
+	D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc = {};
+	descriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+	descriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+	descriptorHeapDesc.NumDescriptors = RendererGlobals::frameCount;
+
+	m_device->CreateDescriptorHeap(&descriptorHeapDesc, IID_PPV_ARGS(&m_rtvHeap));
+
+	m_rtvHandleIncrementSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+}
+
+void PorterRenderer::CreateCommandAllocator()
+{
+	m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator));
 }

@@ -53,7 +53,7 @@ int CALLBACK WinMain(HINSTANCE, HINSTANCE, LPSTR, INT)
 		return 0;
 	}
 
-	porterRenderer->Init(hWnd);
+	porterRenderer->Initialize(hWnd);
 
 	ShowWindow(hWnd, SW_SHOW);
 
